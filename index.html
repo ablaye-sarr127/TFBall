@@ -129,6 +129,37 @@
     </div>
 
     <!-- SCRIPTS CORE ET FIREBASE SERONT INJECTES DANS LA PROCHAINE ETAPE -->
+        <!-- SDK Firebase et Configuration Initiale -->
+    <script type="module">
+        // Importation des fonctions nécessaires depuis les CDN officiels de Firebase
+        import { initializeApp } from "https://gstatic.com";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://gstatic.com";
+        import { getFirestore, doc, setDoc, getDoc } from "https://gstatic.com";
+
+        // CONFIGURATION GOOGLE FIREBASE
+        // Remplacez ces valeurs fictives par vos clés réelles fournies sur ://google.com
+        const firebaseConfig = {
+            apiKey: "AIzaSyYOUR_ACTUAL_API_KEY_HERE",
+            authDomain: "://firebaseapp.com",
+            projectId: "votre-projet",
+            storageBucket: "://appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456:web:abcd"
+        };
+
+        // Initialisation de Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Rendre les outils Firebase disponibles globalement pour app.js
+        window.fbAuth = auth;
+        window.fbDb = db;
+        window.fbMethods = { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, doc, setDoc, getDoc };
+    </script>
+
+    <!-- Chargement de notre logique applicative principale -->
     <script src="app.js"></script>
+
 </body>
 </html>
