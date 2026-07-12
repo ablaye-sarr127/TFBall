@@ -139,3 +139,44 @@ max-height: 85vh; /* Correction de 85ffvh en 85vh */
 
 .btn-reset-top { background-color: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; float: right; margin-bottom: 15px; font-size: 0.9rem; }
 .btn-reset-top:hover { background-color: #dc2626; }
+/* =========================================================================
+   CORRECTION NAVIGATION RESPONSIVE SMARTPHONE
+   ========================================================================= */
+@media (max-width: 768px) {
+    /* 1. Force la barre d'onglets à revenir à la ligne ou à défiler au lieu de déborder */
+    .tabs-nav {
+        display: flex;
+        flex-wrap: wrap; /* Permet aux boutons de passer à la ligne suivante */
+        gap: 5px;
+        border-bottom: none;
+        margin-bottom: 15px;
+    }
+
+    /* 2. Adapte le style des boutons pour qu'ils ressemblent à de vrais boutons tactiles */
+    .tab-link {
+        flex: 1 1 calc(50% - 10px); /* Aligne les boutons proprement 2 par 2 sur mobile */
+        text-align: center;
+        padding: 12px 8px;
+        background: var(--bg-main);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 0.9rem;
+    }
+
+    /* 3. Style visuel du bouton actif sur mobile */
+    .tab-link.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    /* 4. Repositionne proprement le bouton rouge de réinitialisation */
+    .btn-reset-top {
+        float: none;
+        width: 100%;
+        margin-bottom: 15px;
+        text-align: center;
+        box-sizing: border-box;
+    }
+}
+
