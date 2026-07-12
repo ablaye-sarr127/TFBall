@@ -882,6 +882,3 @@ const App = {
 
     
 }; // <-- CETTE ACCOLADE FERME SÉCURISÉMENT L'OBJET GLOBAL APP
-
-// Déclenchement au chargement du DOM
-window.addEventListener('DOMContentLoaded', () => App.init());
