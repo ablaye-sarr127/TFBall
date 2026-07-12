@@ -9,7 +9,7 @@
 <body>
     <div class="app-container">
         
-        <!-- ÉCRAN 0 : AUTHENTIFICATION (CONNEXION / INSCRIPTION) -->
+        <!-- ÉCRAN 0 : AUTHENTIFICATION -->
         <div id="screen-auth" class="screen">
             <h1 id="auth-title">🔐 Connexion Organisateur</h1>
             <p class="subtitle">Connectez-vous pour gérer vos tournois</p>
@@ -26,7 +26,7 @@
             </div>
         </div>
 
-        <!-- ÉCRAN 1 : CHOIX DU MODE & PERSONNALISATION DU TOURNOI -->
+        <!-- ÉCRAN 1 : CHOIX DU MODE & PERSONNALISATION -->
         <div id="screen-mode" class="screen hidden">
             <div class="user-header">
                 <span id="user-display-email">👤 admin@tournoi.com</span>
@@ -36,7 +36,6 @@
             <h1>🏆 Football Pro Manager</h1>
             <p class="subtitle">Configurez et sélectionnez le format de votre compétition</p>
             
-            <!-- NOUVEAU : Personnalisation du Tournoi -->
             <div class="tournament-custom-box">
                 <h3>🏷️ Infos du Tournoi</h3>
                 <div class="input-group logo-group">
@@ -78,7 +77,6 @@
 
         <!-- ÉCRAN 3 : DASHBOARD CENTRAL -->
         <div id="screen-dashboard" class="screen hidden">
-            <!-- NOUVEAU : En-tête dynamique du tournoi créé -->
             <div class="tournament-banner">
                 <img id="view-tournament-logo" src="" class="tournament-banner-logo hidden" alt="Drapeau">
                 <h2 id="view-tournament-name">Mon Tournoi</h2>
@@ -127,42 +125,49 @@
             <div class="modal-footer"><button class="btn-secondary" onclick="App.closeModal()">Annuler</button><button class="btn-primary" onclick="App.saveMatchEvents()">Valider le match</button></div>
         </div>
     </div>
-
-        <!-- SDK Firebase & Gestion de l'Authentification Organisateur -->
+    <!-- SDK Firebase & Connexion Organisateur Sécurisée -->
     <script type="module">
         import { initializeApp } from "https://gstatic.com";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://gstatic.com";
         import { getFirestore, doc, setDoc, getDoc } from "https://gstatic.com";
 
         // =========================================================================
-        // CONFIGURATION FIREBASE SECURISEE (Remplacez avec VOS vraies clés)
+        // CONFIGURATION FIREBASE SECURISEE (Remplacez par VOS vraies clés Firebase)
         // =========================================================================
-       // Your web app's Firebase configuration
-        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-        const firebaseConfig = {
-          apiKey: "AIzaSyDMEsXWfu0X9y0C2Cvur0wO_FJMq8kfyiQ",
-          authDomain: "gestion-tournoi-foot.firebaseapp.com",
-          projectId: "gestion-tournoi-foot",
-          storageBucket: "gestion-tournoi-foot.firebasestorage.app",
-          messagingSenderId: "434944691951",
-          appId: "1:434944691951:web:71dfdf0bc108805a10951a",
-          measurementId: "G-PG1H848017"
-        };
+        // Your web app's Firebase configuration
+
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+
+const firebaseConfig = {
+
+  apiKey: "AIzaSyDMEsXWfu0X9y0C2Cvur0wO_FJMq8kfyiQ",
+
+  authDomain: "gestion-tournoi-foot.firebaseapp.com",
+
+  projectId: "gestion-tournoi-foot",
+
+  storageBucket: "gestion-tournoi-foot.firebasestorage.app",
+
+  messagingSenderId: "434944691951",
+
+  appId: "1:434944691951:web:71dfdf0bc108805a10951a",
+
+  measurementId: "G-PG1H848017"
+
+};
 
 
-        // Initialisation des instances Google Cloud
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Partage des instances de base pour les fonctions de app.js
+        // Exportations globales directes et sécurisées pour app.js
         window.fbAuth = auth;
         window.fbDb = db;
         window.fbDoc = doc;
         window.fbSetDoc = setDoc;
         window.fbGetDoc = getDoc;
 
-        // Réécriture sécurisée de l'objet Auth directement dans le module
         window.Auth = {
             isLoginMode: true,
             currentUser: null,
@@ -173,10 +178,14 @@
                         this.currentUser = user;
                         document.getElementById('user-display-email').textContent = `👤 ${user.email}`;
                         document.getElementById('screen-auth').classList.add('hidden');
-                        App.loadFromFirebase(user.uid);
+                        if (window.App && typeof window.App.loadFromFirebase === 'function') {
+                            window.App.loadFromFirebase(user.uid);
+                        }
                     } else {
                         this.currentUser = null;
-                        App.showScreen('screen-auth');
+                        if (window.App && typeof window.App.showScreen === 'function') {
+                            window.App.showScreen('screen-auth');
+                        }
                     }
                 });
             },
@@ -217,7 +226,7 @@
                     } else {
                         await createUserWithEmailAndPassword(auth, email, password);
                         alert("Votre compte organisateur a été créé avec succès ! Connectez-vous dès maintenant.");
-                        this.toggleMode(); // Bascule automatiquement sur l'écran de connexion
+                        this.toggleMode();
                     }
                 } catch (error) {
                     alert(`Erreur d'authentification : ${error.message}`);
@@ -232,13 +241,10 @@
             }
         };
 
-        // Lancement de l'écouteur d'état utilisateur
         window.Auth.init();
     </script>
 
-    <!-- Chargement de notre application une fois le module Firebase actif -->
+    <!-- Code applicatif principal -->
     <script src="app.js"></script>
-
-
 </body>
 </html>
