@@ -1,4 +1,82 @@
 // =========================================================================
+// MODULE D'AUTHENTIFICATION & BASE DE DONNÉES CLOUD (FIREBASE)
+// =========================================================================
+
+const Auth = {
+    isLoginMode: true,
+    currentUser: null,
+
+    init() {
+        // Écouteur en temps réel pour savoir si un utilisateur est connecté ou non
+        window.fbAuth.onAuthStateChanged((user) => {
+            if (user) {
+                this.currentUser = user;
+                document.getElementById('user-display-email').textContent = `👤 ${user.email}`;
+                document.getElementById('screen-auth').classList.add('hidden');
+                
+                // Charger le tournoi lié à ce compte depuis le Cloud Firebase
+                App.loadFromFirebase(user.uid);
+            } else {
+                this.currentUser = null;
+                App.showScreen('screen-auth');
+            }
+        });
+    },
+
+    toggleMode() {
+        this.isLoginMode = !this.isLoginMode;
+        const title = document.getElementById('auth-title');
+        const btn = document.getElementById('btn-auth-primary');
+        const link = document.getElementById('auth-toggle-link');
+
+        if (this.isLoginMode) {
+            title.textContent = "🔐 Connexion Organisateur";
+            btn.textContent = "Se connecter";
+            link.textContent = "Créer un compte";
+        } else {
+            title.textContent = "📝 Inscription Organisateur";
+            btn.textContent = "S'inscrire et commencer";
+            link.textContent = "Déjà un compte ? Connexion";
+        }
+    },
+
+    async submit() {
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value;
+
+        if (!email || !password) {
+            alert("Veuillez remplir tous les champs d'authentification.");
+            return;
+        }
+
+        const m = window.fbMethods;
+        try {
+            if (this.isLoginMode) {
+                // Connexion sécurisée
+                await m.signInWithEmailAndPassword(window.fbAuth, email, password);
+            } else {
+                // Inscription sécurisée
+                await m.createUserWithEmailAndPassword(window.fbAuth, email, password);
+                alert("Votre compte organisateur a été créé avec succès !");
+            }
+        } catch (error) {
+            alert(`Erreur d'authentification : ${error.message}`);
+        }
+    },
+
+    async logout() {
+        if (confirm("Voulez-vous vous déconnecter de votre espace de gestion ?")) {
+            await window.fbMethods.signOut(window.fbAuth);
+            window.location.reload();
+        }
+    }
+};
+
+// Initialisation globale de l'authentification au démarrage
+window.addEventListener('DOMContentLoaded', () => Auth.init());
+
+
+// =========================================================================
 // PARTIE 1 : CLASSES DE MODELISATION (Données)
 // =========================================================================
 
@@ -123,14 +201,30 @@ const App = {
         if (tabId === 'media') this.generateMediaArticles();
     },
 
-    launchCompetition() {
+        launchCompetition() {
+        const tName = document.getElementById('tournament-name-input').value.trim() || "Mon Tournoi Pro";
+        const tLogo = document.getElementById('tournament-logo-input').value.trim() || "";
+
+        document.getElementById('view-tournament-name').textContent = tName;
+        const bannerLogoImg = document.getElementById('view-tournament-logo');
+        if (tLogo) {
+            bannerLogoImg.src = tLogo;
+            bannerLogoImg.classList.remove('hidden');
+        } else {
+            bannerLogoImg.classList.add('hidden');
+        }
+
         this.showScreen('screen-dashboard');
         if (this.mode === 'championship') {
             this.generateChampionship();
         } else if (this.mode === 'worldcup') {
             this.generateWorldCup();
         }
+        
+        // Lancer une première sauvegarde à la création
+        this.saveToLocalStorage();
     },
+
 
         // =========================================================================
     // PARTIE 3 : LOGIQUE DU MODE CHAMPIONNAT
@@ -682,45 +776,111 @@ const App = {
         });
     },
 
-    saveToLocalStorage() {
+    // Sauvegarde l'état du tournoi dans le Cloud sous la responsabilité du créateur connecté
+    async saveToLocalStorage() {
+        if (!Auth.currentUser) return;
+
+        // Récupération des infos de personnalisation du tournoi
+        const tName = document.getElementById('tournament-name-input').value.trim() || "Mon Tournoi Pro";
+        const tLogo = document.getElementById('tournament-logo-input').value.trim() || "";
+
         const dataToSave = {
-            mode: this.mode, teams: this.teams, fixtures: this.fixtures,
-            groups: this.groups, groupFixtures: this.groupFixtures,
-            bracket: this.bracket, tournamentPhase: this.tournamentPhase
+            tournamentName: tName,
+            tournamentLogo: tLogo,
+            mode: this.mode, 
+            teams: JSON.parse(JSON.stringify(this.teams)), // Sérialisation propre
+            fixtures: JSON.parse(JSON.stringify(this.fixtures)),
+            groups: JSON.parse(JSON.stringify(this.groups)), 
+            groupFixtures: JSON.parse(JSON.stringify(this.groupFixtures)),
+            bracket: JSON.parse(JSON.stringify(this.bracket)), 
+            tournamentPhase: this.tournamentPhase
         };
-        localStorage.setItem('football_manager_save', JSON.stringify(dataToSave));
+
+        try {
+            const m = window.fbMethods;
+            // Crée ou écrase le document unique lié à l'ID de cet utilisateur dans la collection "tournaments"
+            const userDocRef = m.doc(window.fbDb, "tournaments", Auth.currentUser.uid);
+            await m.setDoc(userDocRef, dataToSave);
+            console.log("Données du tournoi synchronisées dans le Cloud !");
+        } catch (e) {
+            console.error("Échec de la sauvegarde sur Firebase :", e);
+        }
     },
 
-    loadFromLocalStorage() {
-        const savedData = localStorage.getItem('football_manager_save');
-        if (!savedData) return false;
+    // Charge les données à distance depuis Firebase Firestore
+    async loadFromFirebase(userId) {
         try {
-            const data = JSON.parse(savedData);
-            this.mode = data.mode; this.teams = data.teams; this.fixtures = data.fixtures;
-            this.groups = data.groups; this.groupFixtures = data.groupFixtures;
-            this.bracket = data.bracket; this.tournamentPhase = data.tournamentPhase;
+            const m = window.fbMethods;
+            const userDocRef = m.doc(window.fbDb, "tournaments", userId);
+            const docSnap = await m.getDoc(userDocRef);
 
+            if (!docSnap.exists()) {
+                // Si l'utilisateur n'a pas encore créé de tournoi, on le laisse sur l'écran de choix du mode
+                this.showScreen('screen-mode');
+                return;
+            }
+
+            const data = docSnap.data();
+            
+            // Réassignation des variables de l'application
+            this.mode = data.mode; 
+            this.teams = data.teams; 
+            this.fixtures = data.fixtures;
+            this.groups = data.groups; 
+            this.groupFixtures = data.groupFixtures;
+            this.bracket = data.bracket; 
+            this.tournamentPhase = data.tournamentPhase;
+
+            // Mettre à jour la bannière visuelle personnalisée du tournoi
+            document.getElementById('tournament-name-input').value = data.tournamentName || "";
+            document.getElementById('tournament-logo-input').value = data.tournamentLogo || "";
+            document.getElementById('view-tournament-name').textContent = data.tournamentName || "Mon Tournoi";
+            
+            const bannerLogoImg = document.getElementById('view-tournament-logo');
+            if (data.tournamentLogo) {
+                bannerLogoImg.src = data.tournamentLogo;
+                bannerLogoImg.classList.remove('hidden');
+            } else {
+                bannerLogoImg.classList.add('hidden');
+            }
+
+            // Basculer l'affichage vers le tableau de bord
             this.showScreen('screen-dashboard');
             if (this.mode === 'worldcup' && this.tournamentPhase === 'knockout') {
                 document.getElementById('tab-link-bracket').style.display = 'block';
             }
 
+            // Rafraîchir les structures graphiques
             if (this.mode === 'championship') {
-                this.computeStandings(); this.renderMatchesTab();
+                this.computeStandings(); 
+                this.renderMatchesTab();
             } else {
                 if (this.tournamentPhase === 'groups') this.renderGroupsTab();
                 else this.renderBracket();
             }
-            return true;
-        } catch (e) { return false; }
+        } catch (e) {
+            console.error("Erreur de récupération Firebase :", e);
+            this.showScreen('screen-mode');
+        }
     },
 
-    resetApplication() {
-        if (confirm("Réinitialiser l'application ?")) {
-            localStorage.removeItem('football_manager_save');
-            window.location.reload();
+    // Supprime la sauvegarde à distance pour tout recommencer
+    async resetApplication() {
+        if (confirm("Êtes-vous sûr de vouloir supprimer définitivement ce tournoi du Cloud pour en créer un nouveau ?")) {
+            try {
+                const m = window.fbMethods;
+                const userDocRef = m.doc(window.fbDb, "tournaments", Auth.currentUser.uid);
+                // On écrase le document avec un objet vide
+                await m.setDoc(userDocRef, {});
+                window.location.reload();
+            } catch (e) {
+                alert("Erreur lors de la réinitialisation.");
+            }
         }
     }
+
+
+    
 }; // <-- CETTE ACCOLADE FERME SÉCURISÉMENT L'OBJET GLOBAL APP
 
 // Déclenchement au chargement du DOM
