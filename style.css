@@ -185,3 +185,59 @@ li { padding: 10px; border-bottom: 1px solid var(--border); background: #f9fafb;
     .cards-checkboxes { justify-content: center; margin-top: 4px; }
 }
 
+/* =========================================================================
+   CORRECTIF GROUPES RESPONSIVE - PARTIE 1
+   ========================================================================= */
+@media (max-width: 768px) {
+    /* Force le conteneur complet des matchs à ne jamais dépasser du téléphone */
+    .group-matches-side {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        overflow-x: hidden; /* Empêche le conteneur de fuir vers la droite */
+    }
+
+    /* Rend chaque ligne de match de poule flexible et lisible sur petit écran */
+    .compact-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 4px;
+        padding: 8px 4px; /* Rend la carte légèrement plus compacte */
+        width: 100%;
+    }
+
+    /* Réduit un peu la taille des noms pour laisser de la place au bouton de score */
+    .compact-card .team-name {
+        font-size: 0.75rem;
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis; /* Coupe proprement avec "..." si le nom est trop long */
+    }
+}
+
+/* =========================================================================
+   CORRECTIF GROUPES RESPONSIVE - PARTIE 2
+   ========================================================================= */
+@media (max-width: 768px) {
+    /* Ajuste le bouton de score pour mobile */
+    .compact-btn {
+        padding: 5px 8px;
+        font-size: 0.75rem;
+        min-width: 55px; /* Largeur minimale réduite pour tenir sur les petits écrans */
+        flex-shrink: 0;  /* Empêche le bouton de s'écraser */
+    }
+    
+    /* Aligne le texte des équipes par rapport au bouton central */
+    .compact-card .text-right {
+        text-align: right;
+        padding-right: 2px;
+    }
+    .compact-card .text-left {
+        text-align: left;
+        padding-left: 2px;
+    }
+}
+
