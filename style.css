@@ -241,3 +241,86 @@ li { padding: 10px; border-bottom: 1px solid var(--border); background: #f9fafb;
     }
 }
 
+/* =========================================================================
+   Nouveaux Styles : Authentification et Bannière Tournoi Personnalisée
+   ========================================================================= */
+.form-container {
+    max-width: 400px;
+    margin: 20px auto 0 auto;
+}
+.auth-toggle-text {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 0.9rem;
+    color: var(--secondary);
+}
+.auth-toggle-text span {
+    color: var(--primary);
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: underline;
+}
+.user-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-main);
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+}
+.btn-logout {
+    background: #ef4444;
+    color: white;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    border-radius: 4px;
+}
+.tournament-custom-box {
+    background: #f8fafc;
+    border: 1px dashed var(--primary);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+}
+.tournament-custom-box h3 {
+    text-align: left;
+    font-size: 1rem;
+    margin-bottom: 10px;
+    color: var(--primary);
+}
+.tournament-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+.tournament-banner h2 {
+    color: white;
+    margin: 0;
+    font-size: 1.5rem;
+}
+.tournament-banner-logo {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 2px solid white;
+    background: white;
+}
+
+@media (max-width: 768px) {
+    .tournament-banner {
+        flex-direction: column;
+        text-align: center;
+        padding: 15px;
+    }
+    .tournament-banner h2 { font-size: 1.2rem; }
+}
+
