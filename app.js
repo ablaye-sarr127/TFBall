@@ -669,3 +669,17 @@ const App = {
             this.showScreen('screen-mode');
         }
     },
+
+        async resetApplication() {
+        if (confirm("Supprimer définitivement ce tournoi du Cloud ?")) {
+            try {
+                const userDocRef = window.fbDoc(window.fbDb, "tournaments", window.Auth.currentUser.uid);
+                await window.fbSetDoc(userDocRef, {});
+                window.location.reload();
+            } catch (e) {
+                alert("Erreur lors de la réinitialisation.");
+            }
+        }
+    }
+}; // <-- BIEN VÉRIFIER QUE CETTE VIRGULE ET CETTE ACCOLADE FERMENT BIEN LE SCRIPT ICI
+
