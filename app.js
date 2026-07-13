@@ -1,5 +1,5 @@
 // =========================================================================
-// PARTIE 1 : CLASSES DE MODELISATION (Données de base)
+// PARTIE 1 : CLASSES DE MODELISATION (Joueurs et Équipes)
 // =========================================================================
 
 class Player {
@@ -33,6 +33,9 @@ class Team {
         }
     }
 }
+// =========================================================================
+// PARTIE 2 : STRUCTURE MATCH & ETAT CENTRAL DE L'APPLICATION
+// =========================================================================
 
 class Match {
     constructor(homeTeam, awayTeam) {
@@ -45,10 +48,6 @@ class Match {
     }
 }
 
-// =========================================================================
-// PARTIE 2 : MOTEUR DE L'APPLICATION (Gestion des écrans & onglets)
-// =========================================================================
-
 const App = {
     mode: null,      
     teams: [],       
@@ -58,6 +57,9 @@ const App = {
     bracket: {},      
     tournamentPhase: 'groups', 
     activeMatchData: null,
+    // =========================================================================
+    // PARTIE 3 : CONTROLE DES ECRANS ET VISUALISATION
+    // =========================================================================
 
     showScreen(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
@@ -70,21 +72,8 @@ const App = {
             chosenMode === 'championship' ? "Configuration du Championnat" : "Configuration du Tournoi";
         this.showScreen('screen-setup');
     },
-
-    switchTab(tabId) {
-        document.querySelectorAll('.tab-link').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
-        
-        if (event && event.target) {
-            event.target.classList.add('active');
-        }
-        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-
-        if (tabId === 'stats') this.renderPlayerStats();
-        if (tabId === 'media') this.generateMediaArticles();
-    },
     // =========================================================================
-    // PARTIE 3 : CONFIGURATION DES EQUIPES ET LOGOS
+    // PARTIE 4 : INSCRIPTION ET ARCHITECTURE DES EQUIPES
     // =========================================================================
 
     addTeam() {
@@ -115,6 +104,22 @@ const App = {
         `).join('');
         document.getElementById('btn-launch').disabled = this.teams.length < 4;
     },
+    // =========================================================================
+    // PARTIE 5 : NAVIGATION PAR ONGLETS (DASHBOARD)
+    // =========================================================================
+
+    switchTab(tabId) {
+        document.querySelectorAll('.tab-link').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+        
+        if (event && event.target) {
+            event.target.classList.add('active');
+        }
+        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+        if (tabId === 'stats') this.renderPlayerStats();
+        if (tabId === 'media') this.generateMediaArticles();
+    },
 
     launchCompetition() {
         const tName = document.getElementById('tournament-name-input').value.trim() || "Mon Tournoi Pro";
@@ -138,7 +143,7 @@ const App = {
         this.saveToLocalStorage();
     },
     // =========================================================================
-    // PARTIE 4 : MODULE CHAMPIONNAT - GENERATION DU CALENDRIER (LIGA)
+    // PARTIE 6 : GENERATEUR ALGORITHMIQUE DU CHAMPIONNAT (LIGA)
     // =========================================================================
 
     generateChampionship() {
@@ -174,7 +179,7 @@ const App = {
         this.renderStandingsTab();
     },
     // =========================================================================
-    // PARTIE 5 : RENDER MATCHS ET CALCUL DU CLASSEMENT CHAMPIONNAT
+    // PARTIE 7 : INTERFACE ET CORE CALCUL DE LA LIGA
     // =========================================================================
 
     renderMatchesTab() {
@@ -234,6 +239,9 @@ const App = {
         });
         this.renderStandingsTab();
     },
+    // =========================================================================
+    // PARTIE 8 : TABLEAU GRAPHIQUE DU CLASSEMENT GENERAL
+    // =========================================================================
 
     renderStandingsTab() {
         const container = document.getElementById('tab-standings');
@@ -263,9 +271,8 @@ const App = {
             </table>
         `;
     },
-
-        // =========================================================================
-    // PARTIE 6 : MODULE TOURNOI - FONDATIONS PHASE DE GROUPES
+    // =========================================================================
+    // PARTIE 9 : REPARTITION ET LOGIQUE DES POULES (TOURNOI)
     // =========================================================================
 
     generateWorldCup() {
@@ -302,6 +309,9 @@ const App = {
             pool.splice(1, 0, pool.pop());
         }
     },
+    // =========================================================================
+    // PARTIE 10 : INTERFACE DE LA PHASE DE GROUPES DYNAMIQUE
+    // =========================================================================
 
     renderGroupsTab() {
         const container = document.getElementById('tab-matches');
@@ -381,26 +391,26 @@ const App = {
         }
     },
     // =========================================================================
-    // PARTIE 7 : MODULE TOURNOI - ARBRE ELIMINATOIRE (BRACKET)
+    // PARTIE 11 : ALGORITHME DE L'ARBRE FINAL (ELIMINATION DIRECTE)
     // =========================================================================
 
     generateKnockoutBracket() {
         this.tournamentPhase = 'knockout';
         let qualified = [];
         Object.keys(this.groups).sort().forEach(letter => {
-            if(this.groups[letter] && this.groups[letter][0]) qualified.push(this.groups[letter][0]);
-            if(this.groups[letter] && this.groups[letter][1]) qualified.push(this.groups[letter][1]);
+            if(this.groups[letter][0]) qualified.push(this.groups[letter][0]);
+            if(this.groups[letter][1]) qualified.push(this.groups[letter][1]);
         });
 
         if(qualified.length < 4) {
-            alert("Pas assez d'équipes qualifiées pour générer l'arbre.");
+            alert("Pas assez d'équipes qualifiées pour générer des demi-finales.");
             return;
         }
 
         this.bracket = {
             demis: [
                 new Match(qualified[0], qualified[3] || new Team("À Déterminer")),
-                new Match(qualified[2], qualified[1] || new Team("À Déterminer"))
+                new Match(qualified[2] || new Team("À Déterminer"), qualified[1])
             ],
             finale: [
                 new Match(new Team("À Déterminer"), new Team("À Déterminer"))
@@ -463,14 +473,14 @@ const App = {
                 if (idx === 0) this.bracket.finale[0].home = winner;
                 if (idx === 1) this.bracket.finale[0].away = winner;
             } else if (phase === 'finale') {
-                alert(`🎉 LE CHAMPION EST : ${winner.name} !!! 🎉`);
+                alert(`🎉 LE CHAMPION DU TOURNOI EST : ${winner.name} !!! 🎉`);
             }
             this.saveToLocalStorage();
         }
         this.renderBracket();
     },
     // =========================================================================
-    // PARTIE 8 : GESTION DE LA MODALE INTERACTIVE DE FEUILLE DE MATCH
+    // PARTIE 12 : INTERACTION DE LA MODALE & FEUILLE DE MATCH
     // =========================================================================
 
     openMatchModal(type, firstIndex, secondIndex) {
@@ -519,15 +529,11 @@ const App = {
         }
     },
 
-        // =========================================================================
-    // PARTIE 9 : ATTRIBUTION DES BUTS, PASSES ET CARTONS (STATISTIQUES)
-    // =========================================================================
-
     createEventRowHTML(team, side, goalIndex) {
         const row = document.createElement('div');
         row.className = 'modal-event-row';
         const scorerOptions = team.players.map(p => `<option value="${p.name}">🏃 ${p.name}</option>`).join('');
-        const assistantOptions = `<option value="">Pas de passeur</option>` + team.players.map(p => `<option value="${p.name}">👟 ${p.name}</option>`).join('');
+        const assistantOptions = `<option value="">Pas de passeur</option>` + team.players.map(p => `<option value="${p.name}">... ${p.name}</option>`).join('');
 
         row.innerHTML = `
             <span>But n°${goalIndex + 1} :</span>
@@ -621,8 +627,92 @@ const App = {
             <li><span class="rank-badge civil">${idx + 1}</span> <strong>${p.name}</strong> <span class="stat-count assist">${p.assists} Passes</span></li>
         `).join('') : "<p class='placeholder-text'>Aucune passe.</p>";
     },
+    // =========================================================================
+    // PARTIE 13 : JOURNALISME MEDIA, SAUVEGARDE CLOUD & FIN DE L'OBJET
+    // =========================================================================
 
-        async loadFromFirebase(userId) {
+    generateMediaArticles() {
+        const feed = document.getElementById('media-feed');
+        feed.innerHTML = "";
+        let playedMatches = [];
+
+        if (this.mode === 'championship') {
+            playedMatches = this.fixtures.flat().filter(m => m.played);
+        } else {
+            playedMatches = Object.values(this.groupFixtures).flat().filter(m => m.played);
+            if (this.bracket && this.bracket.demis) playedMatches.push(...this.bracket.demis.filter(m => m.played));
+            if (this.bracket && this.bracket.finale) playedMatches.push(...this.bracket.finale.filter(m => m.played));
+        }
+
+        if (playedMatches.length === 0) {
+            feed.innerHTML = "<p class='placeholder-text'>Jouez des matchs pour remplir les journaux !</p>";
+            return;
+        }
+
+        [...playedMatches].reverse().slice(0, 5).forEach(match => {
+            const article = document.createElement('div');
+            article.className = 'media-card-article';
+            let title = ""; let body = "";
+                const scorerText = match.events.length > 0 
+                ? `grâce à des réalisations de ${[...new Set(match.events.map(e => e.scorer))].join(', ')}` 
+                : "au terme d'une rencontre très fermée";
+
+            if (match.scoreHome === match.scoreAway) {
+                if (match.scoreHome === 0) {
+                    title = `⚽ Ennui mortel entre ${match.home.name} et ${match.away.name}`;
+                    body = `Les spectateurs ont assisté à un bien triste spectacle aujourd'hui. Score final 0-0. Un manque d'ambition flagrant offensivement.`;
+                } else {
+                    title = `🔥 Parité spectaculaire entre ${match.home.name} et ${match.away.name} (${match.scoreHome}-${match.scoreAway})`;
+                    body = `Quel match ! Aucune des deux équipes n'a voulu céder. Un nul logique ${scorerText}. Les attaquants ont régalé le public.`;
+                }
+            } else {
+                const winner = match.scoreHome > match.scoreAway ? match.home.name : match.away.name;
+                const loser = match.scoreHome > match.scoreAway ? match.away.name : match.home.name;
+                const scoreWinner = Math.max(match.scoreHome, match.scoreAway);
+                const scoreLoser = Math.min(match.scoreHome, match.scoreAway);
+                
+                if ((scoreWinner - scoreLoser) >= 3) {
+                    title = `🚨 DÉMONSTRATION ! ${winner} écrase totalement ${loser} !`;
+                    body = `Il n'y a pas eu de match. ${winner} a surclassé son adversaire sur le score sans appel de ${scoreWinner} à ${scoreLoser} ${scorerText}.`;
+                } else {
+                    title = `💼 Victoire précieuse pour ${winner} face à ${loser}`;
+                    body = `Dans un match à haute tension tactique, ${winner} s'impose sur la plus petite des marges (${scoreWinner}-${scoreLoser}) ${scorerText}.`;
+                }
+            }
+
+            article.innerHTML = `<div class="media-badge">FLASH INFO</div><h3>${title}</h3><p>${body}</p><div class="media-footer-text">✍️ Rédaction sportive</div>`;
+            feed.appendChild(article);
+        });
+    },
+
+    async saveToLocalStorage() {
+        if (!window.Auth || !window.Auth.currentUser) return;
+
+        const tName = document.getElementById('tournament-name-input').value.trim() || "Mon Tournoi Pro";
+        const tLogo = document.getElementById('tournament-logo-input').value.trim() || "";
+
+        const dataToSave = {
+            tournamentName: tName,
+            tournamentLogo: tLogo,
+            mode: this.mode, 
+            teams: JSON.parse(JSON.stringify(this.teams)), 
+            fixtures: JSON.parse(JSON.stringify(this.fixtures)),
+            groups: JSON.parse(JSON.stringify(this.groups)), 
+            groupFixtures: JSON.parse(JSON.stringify(this.groupFixtures)),
+            bracket: JSON.parse(JSON.stringify(this.bracket)), 
+            tournamentPhase: this.tournamentPhase
+        };
+
+        try {
+            const userDocRef = window.fbDoc(window.fbDb, "tournaments", window.Auth.currentUser.uid);
+            await window.fbSetDoc(userDocRef, dataToSave);
+            console.log("Données du tournoi synchronisées dans le Cloud !");
+        } catch (e) {
+            console.error("Échec de la sauvegarde sur Firebase :", e);
+        }
+    },
+
+    async loadFromFirebase(userId) {
         try {
             const userDocRef = window.fbDoc(window.fbDb, "tournaments", userId);
             const docSnap = await window.fbGetDoc(userDocRef);
@@ -644,6 +734,7 @@ const App = {
             document.getElementById('tournament-name-input').value = data.tournamentName || "";
             document.getElementById('tournament-logo-input').value = data.tournamentLogo || "";
             document.getElementById('view-tournament-name').textContent = data.tournamentName || "Mon Tournoi";
+            
             const bannerLogoImg = document.getElementById('view-tournament-logo');
             if (data.tournamentLogo) {
                 bannerLogoImg.src = data.tournamentLogo;
@@ -670,7 +761,7 @@ const App = {
         }
     },
 
-        async resetApplication() {
+    async resetApplication() {
         if (confirm("Supprimer définitivement ce tournoi du Cloud ?")) {
             try {
                 const userDocRef = window.fbDoc(window.fbDb, "tournaments", window.Auth.currentUser.uid);
@@ -681,5 +772,5 @@ const App = {
             }
         }
     }
-}; // <-- BIEN VÉRIFIER QUE CETTE VIRGULE ET CETTE ACCOLADE FERMENT BIEN LE SCRIPT ICI
+}; // <-- CETTE ACCOLADE ULTRA-IMPORTANTE FERME ENFIN L'OBJET APP ET LE FICHIER JS
 
