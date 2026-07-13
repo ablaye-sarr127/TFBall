@@ -1,83 +1,5 @@
 // =========================================================================
-// MODULE D'AUTHENTIFICATION & BASE DE DONNÉES CLOUD (FIREBASE)
-// =========================================================================
-
-const Auth = {
-    isLoginMode: true,
-    currentUser: null,
-
-    init() {
-        // Écouteur en temps réel pour savoir si un utilisateur est connecté ou non
-        window.fbAuth.onAuthStateChanged((user) => {
-            if (user) {
-                this.currentUser = user;
-                document.getElementById('user-display-email').textContent = `👤 ${user.email}`;
-                document.getElementById('screen-auth').classList.add('hidden');
-                
-                // Charger le tournoi lié à ce compte depuis le Cloud Firebase
-                App.loadFromFirebase(user.uid);
-            } else {
-                this.currentUser = null;
-                App.showScreen('screen-auth');
-            }
-        });
-    },
-
-    toggleMode() {
-        this.isLoginMode = !this.isLoginMode;
-        const title = document.getElementById('auth-title');
-        const btn = document.getElementById('btn-auth-primary');
-        const link = document.getElementById('auth-toggle-link');
-
-        if (this.isLoginMode) {
-            title.textContent = "🔐 Connexion Organisateur";
-            btn.textContent = "Se connecter";
-            link.textContent = "Créer un compte";
-        } else {
-            title.textContent = "📝 Inscription Organisateur";
-            btn.textContent = "S'inscrire et commencer";
-            link.textContent = "Déjà un compte ? Connexion";
-        }
-    },
-
-    async submit() {
-        const email = document.getElementById('auth-email').value.trim();
-        const password = document.getElementById('auth-password').value;
-
-        if (!email || !password) {
-            alert("Veuillez remplir tous les champs d'authentification.");
-            return;
-        }
-
-        const m = window.fbMethods;
-        try {
-            if (this.isLoginMode) {
-                // Connexion sécurisée
-                await m.signInWithEmailAndPassword(window.fbAuth, email, password);
-            } else {
-                // Inscription sécurisée
-                await m.createUserWithEmailAndPassword(window.fbAuth, email, password);
-                alert("Votre compte organisateur a été créé avec succès !");
-            }
-        } catch (error) {
-            alert(`Erreur d'authentification : ${error.message}`);
-        }
-    },
-
-    async logout() {
-        if (confirm("Voulez-vous vous déconnecter de votre espace de gestion ?")) {
-            await window.fbMethods.signOut(window.fbAuth);
-            window.location.reload();
-        }
-    }
-};
-
-// Initialisation globale de l'authentification au démarrage
-window.addEventListener('DOMContentLoaded', () => Auth.init());
-
-
-// =========================================================================
-// PARTIE 1 : CLASSES DE MODELISATION (Données)
+// PARTIE 1 : CLASSES DE MODELISATION (Données de base)
 // =========================================================================
 
 class Player {
@@ -87,15 +9,12 @@ class Player {
         this.assists = 0;
         this.yellowCards = 0;
         this.redCards = 0;
-        this.isSuspended = false; // Pour une future gestion avancée
     }
 }
-
 
 class Team {
     constructor(name, logoUrl = "") {
         this.name = name;
-        // Si aucune URL n'est fournie, on met un emoji de couleur aléatoire comme logo par défaut
         this.logo = logoUrl || `https://dicebear.com{name}&backgroundColor=1d4ed8`;
         this.players = [];
         this.played = 0;
@@ -105,7 +24,6 @@ class Team {
         this.goalsFor = 0;
         this.goalsAgainst = 0;
         this.points = 0;
-        
         this.generateDefaultPlayers();
     }
 
@@ -115,7 +33,6 @@ class Team {
         }
     }
 }
-
 
 class Match {
     constructor(homeTeam, awayTeam) {
@@ -129,7 +46,7 @@ class Match {
 }
 
 // =========================================================================
-// PARTIE 2 : MOTEUR DE L'APPLICATION (Navigation & Configuration)
+// PARTIE 2 : MOTEUR DE L'APPLICATION (Gestion des écrans & onglets)
 // =========================================================================
 
 const App = {
@@ -142,10 +59,6 @@ const App = {
     tournamentPhase: 'groups', 
     activeMatchData: null,
 
-    init() {
-        this.loadFromLocalStorage();
-    },
-
     showScreen(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
         document.getElementById(screenId).classList.remove('hidden');
@@ -157,6 +70,22 @@ const App = {
             chosenMode === 'championship' ? "Configuration du Championnat" : "Configuration du Tournoi";
         this.showScreen('screen-setup');
     },
+
+    switchTab(tabId) {
+        document.querySelectorAll('.tab-link').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+        
+        if (event && event.target) {
+            event.target.classList.add('active');
+        }
+        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+        if (tabId === 'stats') this.renderPlayerStats();
+        if (tabId === 'media') this.generateMediaArticles();
+    },
+    // =========================================================================
+    // PARTIE 3 : CONFIGURATION DES EQUIPES ET LOGOS
+    // =========================================================================
 
     addTeam() {
         const nameInput = document.getElementById('team-name-input');
@@ -187,21 +116,7 @@ const App = {
         document.getElementById('btn-launch').disabled = this.teams.length < 4;
     },
 
-
-    switchTab(tabId) {
-        document.querySelectorAll('.tab-link').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
-        
-        if (event && event.target) {
-            event.target.classList.add('active');
-        }
-        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-
-        if (tabId === 'stats') this.renderPlayerStats();
-        if (tabId === 'media') this.generateMediaArticles();
-    },
-
-        launchCompetition() {
+    launchCompetition() {
         const tName = document.getElementById('tournament-name-input').value.trim() || "Mon Tournoi Pro";
         const tLogo = document.getElementById('tournament-logo-input').value.trim() || "";
 
@@ -220,14 +135,10 @@ const App = {
         } else if (this.mode === 'worldcup') {
             this.generateWorldCup();
         }
-        
-        // Lancer une première sauvegarde à la création
         this.saveToLocalStorage();
     },
-
-
-        // =========================================================================
-    // PARTIE 3 : LOGIQUE DU MODE CHAMPIONNAT
+    // =========================================================================
+    // PARTIE 4 : MODULE CHAMPIONNAT - GENERATION DU CALENDRIER (LIGA)
     // =========================================================================
 
     generateChampionship() {
@@ -262,6 +173,9 @@ const App = {
         this.renderMatchesTab();
         this.renderStandingsTab();
     },
+    // =========================================================================
+    // PARTIE 5 : RENDER MATCHS ET CALCUL DU CLASSEMENT CHAMPIONNAT
+    // =========================================================================
 
     renderMatchesTab() {
         const container = document.getElementById('tab-matches');
@@ -351,7 +265,7 @@ const App = {
     },
 
         // =========================================================================
-    // PARTIE 4 : LOGIQUE DU MODE TOURNOI (PHASE DE GROUPES)
+    // PARTIE 6 : MODULE TOURNOI - FONDATIONS PHASE DE GROUPES
     // =========================================================================
 
     generateWorldCup() {
@@ -466,28 +380,27 @@ const App = {
             container.appendChild(btn);
         }
     },
-
-        // =========================================================================
-    // PARTIE 5 : LOGIQUE DE L'ARBRE FINAL (ÉLIMINATION DIRECTE)
+    // =========================================================================
+    // PARTIE 7 : MODULE TOURNOI - ARBRE ELIMINATOIRE (BRACKET)
     // =========================================================================
 
     generateKnockoutBracket() {
         this.tournamentPhase = 'knockout';
         let qualified = [];
         Object.keys(this.groups).sort().forEach(letter => {
-            if(this.groups[letter][0]) qualified.push(this.groups[letter][0]);
-            if(this.groups[letter][1]) qualified.push(this.groups[letter][1]);
+            if(this.groups[letter] && this.groups[letter][0]) qualified.push(this.groups[letter][0]);
+            if(this.groups[letter] && this.groups[letter][1]) qualified.push(this.groups[letter][1]);
         });
 
         if(qualified.length < 4) {
-            alert("Pas assez d'équipes qualifiées pour générer des demi-finales.");
+            alert("Pas assez d'équipes qualifiées pour générer l'arbre.");
             return;
         }
 
         this.bracket = {
             demis: [
                 new Match(qualified[0], qualified[3] || new Team("À Déterminer")),
-                new Match(qualified[2] || new Team("À Déterminer"), qualified[1])
+                new Match(qualified[2], qualified[1] || new Team("À Déterminer"))
             ],
             finale: [
                 new Match(new Team("À Déterminer"), new Team("À Déterminer"))
@@ -550,15 +463,14 @@ const App = {
                 if (idx === 0) this.bracket.finale[0].home = winner;
                 if (idx === 1) this.bracket.finale[0].away = winner;
             } else if (phase === 'finale') {
-                alert(`🎉 LE CHAMPION DU MONDE EST : ${winner.name} !!! 🎉`);
+                alert(`🎉 LE CHAMPION EST : ${winner.name} !!! 🎉`);
             }
             this.saveToLocalStorage();
         }
         this.renderBracket();
     },
-
-        // =========================================================================
-    // PARTIE 6 : INTERACTION MODALE & STATISTIQUES DES JOUEURS
+    // =========================================================================
+    // PARTIE 8 : GESTION DE LA MODALE INTERACTIVE DE FEUILLE DE MATCH
     // =========================================================================
 
     openMatchModal(type, firstIndex, secondIndex) {
@@ -607,13 +519,16 @@ const App = {
         }
     },
 
+        // =========================================================================
+    // PARTIE 9 : ATTRIBUTION DES BUTS, PASSES ET CARTONS (STATISTIQUES)
+    // =========================================================================
+
     createEventRowHTML(team, side, goalIndex) {
         const row = document.createElement('div');
         row.className = 'modal-event-row';
         const scorerOptions = team.players.map(p => `<option value="${p.name}">🏃 ${p.name}</option>`).join('');
         const assistantOptions = `<option value="">Pas de passeur</option>` + team.players.map(p => `<option value="${p.name}">👟 ${p.name}</option>`).join('');
 
-        // Ajout de sélecteurs pour les cartons jaunes et rouges reçus pendant le match
         row.innerHTML = `
             <span>But n°${goalIndex + 1} :</span>
             <select class="sc-select" data-side="${side}" data-type="scorer">${scorerOptions}</select>
@@ -645,14 +560,12 @@ const App = {
         match.played = true;
         match.events = [];
 
-        // Et remplacez son contenu intérieur par ceci :
         document.querySelectorAll('.modal-event-row').forEach(row => {
             const side = row.querySelector('[data-type="scorer"]').dataset.side;
             const scorerName = row.querySelector('[data-type="scorer"]').value;
             const assistantName = row.querySelector('[data-type="assistant"]').value;
             const hasYellow = row.querySelector('.yc-check').checked;
             const hasRed = row.querySelector('.rc-check').checked;
-            
             const team = side === 'home' ? match.home : match.away;
             
             const scorerObj = team.players.find(p => p.name === scorerName);
@@ -666,16 +579,8 @@ const App = {
                 const assistantObj = team.players.find(p => p.name === assistantName);
                 if (assistantObj) assistantObj.assists++;
             }
-            
-            match.events.push({ 
-                scorer: scorerName, 
-                assistant: assistantName, 
-                side: side,
-                yellow: hasYellow,
-                red: hasRed
-            });
+            match.events.push({ scorer: scorerName, assistant: assistantName, side: side, yellow: hasYellow, red: hasRed });
         });
-
 
         if (this.activeMatchData.type === 'championship') {
             this.computeStandings(); this.renderMatchesTab();
@@ -703,7 +608,6 @@ const App = {
         });
     },
 
-
     renderPlayerStats() {
         let allPlayers = this.teams.flatMap(t => t.players);
         let topScorers = [...allPlayers].filter(p => p.goals > 0).sort((a, b) => b.goals - a.goals).slice(0, 10);
@@ -718,111 +622,17 @@ const App = {
         `).join('') : "<p class='placeholder-text'>Aucune passe.</p>";
     },
 
-        // =========================================================================
-    // PARTIE 7 : JOURNALISME MEDIA, STOCKAGE LOCAL & FERMETURE DE L'OBJET
-    // =========================================================================
-
-    generateMediaArticles() {
-        const feed = document.getElementById('media-feed');
-        feed.innerHTML = "";
-        let playedMatches = [];
-
-        if (this.mode === 'championship') {
-            playedMatches = this.fixtures.flat().filter(m => m.played);
-        } else {
-            playedMatches = Object.values(this.groupFixtures).flat().filter(m => m.played);
-            if (this.bracket && this.bracket.demis) playedMatches.push(...this.bracket.demis.filter(m => m.played));
-            if (this.bracket && this.bracket.finale) playedMatches.push(...this.bracket.finale.filter(m => m.played));
-        }
-
-        if (playedMatches.length === 0) {
-            feed.innerHTML = "<p class='placeholder-text'>Jouez des matchs pour remplir les journaux !</p>";
-            return;
-        }
-
-        [...playedMatches].reverse().slice(0, 5).forEach(match => {
-            const article = document.createElement('div');
-            article.className = 'media-card-article';
-            let title = ""; let body = "";
-            const scorerText = match.events.length > 0 
-                ? `grâce à des réalisations de ${[...new Set(match.events.map(e => e.scorer))].join(', ')}` 
-                : "au terme d'une rencontre très fermée";
-
-            if (match.scoreHome === match.scoreAway) {
-                if (match.scoreHome === 0) {
-                    title = `⚽ Ennui mortel entre ${match.home.name} et ${match.away.name}`;
-                    body = `Les spectateurs ont assisté à un bien triste spectacle aujourd'hui. Score final 0-0. Un manque d'ambition flagrant offensivement.`;
-                } else {
-                    title = `🔥 Parité spectaculaire entre ${match.home.name} et ${match.away.name} (${match.scoreHome}-${match.scoreAway})`;
-                    body = `Quel match ! Aucune des deux équipes n'a voulu céder. Un nul logique ${scorerText}. Les attaquants ont régalé le public.`;
-                }
-            } else {
-                const winner = match.scoreHome > match.scoreAway ? match.home.name : match.away.name;
-                const loser = match.scoreHome > match.scoreAway ? match.away.name : match.home.name;
-                const scoreWinner = Math.max(match.scoreHome, match.scoreAway);
-                const scoreLoser = Math.min(match.scoreHome, match.scoreAway);
-                
-                if ((scoreWinner - scoreLoser) >= 3) {
-                    title = `🚨 DÉMONSTRATION ! ${winner} écrase totalement ${loser} !`;
-                    body = `Il n'y a pas eu de match. ${winner} a surclassé son adversaire sur le score sans appel de ${scoreWinner} à ${scoreLoser} ${scorerText}.`;
-                } else {
-                    title = `💼 Victoire précieuse pour ${winner} face à ${loser}`;
-                    body = `Dans un match à haute tension tactique, ${winner} s'impose sur la plus petite des marges (${scoreWinner}-${scoreLoser}) ${scorerText}.`;
-                }
-            }
-
-            article.innerHTML = `<div class="media-badge">FLASH INFO</div><h3>${title}</h3><p>${body}</p><div class="media-footer-text">✍️ Rédaction sportive</div>`;
-            feed.appendChild(article);
-        });
-    },
-
-    // Sauvegarde l'état du tournoi dans le Cloud sous la responsabilité du créateur connecté
-    async saveToLocalStorage() {
-        if (!Auth.currentUser) return;
-
-        // Récupération des infos de personnalisation du tournoi
-        const tName = document.getElementById('tournament-name-input').value.trim() || "Mon Tournoi Pro";
-        const tLogo = document.getElementById('tournament-logo-input').value.trim() || "";
-
-        const dataToSave = {
-            tournamentName: tName,
-            tournamentLogo: tLogo,
-            mode: this.mode, 
-            teams: JSON.parse(JSON.stringify(this.teams)), // Sérialisation propre
-            fixtures: JSON.parse(JSON.stringify(this.fixtures)),
-            groups: JSON.parse(JSON.stringify(this.groups)), 
-            groupFixtures: JSON.parse(JSON.stringify(this.groupFixtures)),
-            bracket: JSON.parse(JSON.stringify(this.bracket)), 
-            tournamentPhase: this.tournamentPhase
-        };
-
+        async loadFromFirebase(userId) {
         try {
-            const m = window.fbMethods;
-            // Crée ou écrase le document unique lié à l'ID de cet utilisateur dans la collection "tournaments"
-            const userDocRef = m.doc(window.fbDb, "tournaments", Auth.currentUser.uid);
-            await m.setDoc(userDocRef, dataToSave);
-            console.log("Données du tournoi synchronisées dans le Cloud !");
-        } catch (e) {
-            console.error("Échec de la sauvegarde sur Firebase :", e);
-        }
-    },
-
-    // Charge les données à distance depuis Firebase Firestore
-    async loadFromFirebase(userId) {
-        try {
-            const m = window.fbMethods;
-            const userDocRef = m.doc(window.fbDb, "tournaments", userId);
-            const docSnap = await m.getDoc(userDocRef);
+            const userDocRef = window.fbDoc(window.fbDb, "tournaments", userId);
+            const docSnap = await window.fbGetDoc(userDocRef);
 
             if (!docSnap.exists()) {
-                // Si l'utilisateur n'a pas encore créé de tournoi, on le laisse sur l'écran de choix du mode
                 this.showScreen('screen-mode');
                 return;
             }
 
             const data = docSnap.data();
-            
-            // Réassignation des variables de l'application
             this.mode = data.mode; 
             this.teams = data.teams; 
             this.fixtures = data.fixtures;
@@ -831,11 +641,9 @@ const App = {
             this.bracket = data.bracket; 
             this.tournamentPhase = data.tournamentPhase;
 
-            // Mettre à jour la bannière visuelle personnalisée du tournoi
             document.getElementById('tournament-name-input').value = data.tournamentName || "";
             document.getElementById('tournament-logo-input').value = data.tournamentLogo || "";
             document.getElementById('view-tournament-name').textContent = data.tournamentName || "Mon Tournoi";
-            
             const bannerLogoImg = document.getElementById('view-tournament-logo');
             if (data.tournamentLogo) {
                 bannerLogoImg.src = data.tournamentLogo;
@@ -844,13 +652,11 @@ const App = {
                 bannerLogoImg.classList.add('hidden');
             }
 
-            // Basculer l'affichage vers le tableau de bord
             this.showScreen('screen-dashboard');
             if (this.mode === 'worldcup' && this.tournamentPhase === 'knockout') {
                 document.getElementById('tab-link-bracket').style.display = 'block';
             }
 
-            // Rafraîchir les structures graphiques
             if (this.mode === 'championship') {
                 this.computeStandings(); 
                 this.renderMatchesTab();
@@ -863,22 +669,3 @@ const App = {
             this.showScreen('screen-mode');
         }
     },
-
-    // Supprime la sauvegarde à distance pour tout recommencer
-    async resetApplication() {
-        if (confirm("Êtes-vous sûr de vouloir supprimer définitivement ce tournoi du Cloud pour en créer un nouveau ?")) {
-            try {
-                const m = window.fbMethods;
-                const userDocRef = m.doc(window.fbDb, "tournaments", Auth.currentUser.uid);
-                // On écrase le document avec un objet vide
-                await m.setDoc(userDocRef, {});
-                window.location.reload();
-            } catch (e) {
-                alert("Erreur lors de la réinitialisation.");
-            }
-        }
-    }
-
-
-    
-}; // <-- CETTE ACCOLADE FERME SÉCURISÉMENT L'OBJET GLOBAL APP
